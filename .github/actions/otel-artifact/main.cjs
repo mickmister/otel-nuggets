@@ -31,6 +31,7 @@ try {
     'run', '--detach', '--name', containerName, '--network', 'host',
     '--volume', actionDir + '/collector.yaml:/etc/otelcol-contrib/config.yaml:ro',
     '--volume', outputDir + ':/otel',
+    '--user', process.getuid() + ':' + process.getgid(),
     image, '--config=/etc/otelcol-contrib/config.yaml'
   ]);
 
@@ -63,6 +64,7 @@ try {
     OTEL_METRICS_EXPORTER: 'otlp',
     OTEL_LOGS_EXPORTER: 'otlp'
   })) append(process.env.GITHUB_ENV, key, value);
+  append(process.env.GITHUB_ENV, 'OTEL_ARTIFACT_DIR', outputDir);
 
   console.log('Local OTLP receiver ready on 127.0.0.1:4318');
 } catch (error) {

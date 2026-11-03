@@ -27,6 +27,17 @@ jobs:
           self_monitoring: 'false'
           secrets_to_redact: ${{ toJSON(secrets) }}
 
+      - name: Verify OTLP export reaches disk
+        run: |
+          set -euo pipefail
+          node scripts/emit-smoke-span.mjs
+          for attempt in {1..20}; do
+            test -s "$OTEL_ARTIFACT_DIR/traces.json" && exit 0
+            sleep 1
+          done
+          echo "::error::Collector did not write OTLP traces to disk"
+          exit 1
+
       - name: Run unit tests
         run: node --test
 

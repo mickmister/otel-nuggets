@@ -32,13 +32,3 @@ jobs:
             .github/workflows/otel-review.lock.yml
             .github/workflows/analyze-agent.lock.yml
           retention-days: 2
-      - name: Print compiled workflows for PR synchronization
-        run: |
-          echo 'BEGIN_OTEL_REVIEW_LOCK_B64'
-          base64 -w0 .github/workflows/otel-review.lock.yml
-          echo
-          echo 'END_OTEL_REVIEW_LOCK_B64'
-          echo 'BEGIN_ANALYZE_AGENT_LOCK_B64'
-          base64 -w0 .github/workflows/analyze-agent.lock.yml
-          echo
-          echo 'END_ANALYZE_AGENT_LOCK_B64'
