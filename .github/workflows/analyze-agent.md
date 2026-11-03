@@ -11,6 +11,9 @@ engine: copilot
 permissions:
   contents: read
   actions: read
+observability:
+  otlp:
+    endpoint: http://host.docker.internal:4318
 max-turns: 20
 max-ai-credits: 500
 timeout-minutes: 20
@@ -19,6 +22,8 @@ tools:
 jobs:
   agent:
     pre-steps:
+      - name: Start local OTLP collector
+        uses: ./.github/actions/otel-artifact
       - name: Fetch previous agent evidence
         env:
           GH_TOKEN: ${{ github.token }}
