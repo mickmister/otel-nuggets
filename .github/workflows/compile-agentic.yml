@@ -1,0 +1,36 @@
+name: Compile gh-aw workflows
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/otel-review.md'
+      - '.github/workflows/analyze-agent.md'
+      - '.github/workflows/compile-agentic.yml'
+permissions:
+  contents: write
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up gh-aw
+        uses: github/gh-aw/actions/setup-cli@main
+        with:
+          version: latest
+      - name: Compile
+        run: |
+          gh aw compile otel-review
+          gh aw compile analyze-agent
+          test -s .github/workflows/otel-review.lock.yml
+          test -s .github/workflows/analyze-agent.lock.yml
+      - name: Commit compiled files
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/otel-review.lock.yml .github/workflows/analyze-agent.lock.yml
+          if ! git diff --cached --quiet; then
+            git commit -m 'Compile agentic workflows'
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
