@@ -7,7 +7,7 @@ on:
       - '.github/workflows/analyze-agent.md'
       - '.github/workflows/compile-agentic.yml'
 permissions:
-  contents: write
+  contents: read
 jobs:
   compile:
     runs-on: ubuntu-latest
@@ -24,13 +24,21 @@ jobs:
           gh aw compile analyze-agent
           test -s .github/workflows/otel-review.lock.yml
           test -s .github/workflows/analyze-agent.lock.yml
-      - name: Commit compiled files
+      - name: Upload compiled workflows
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-gh-aw-lockfiles
+          path: |
+            .github/workflows/otel-review.lock.yml
+            .github/workflows/analyze-agent.lock.yml
+          retention-days: 2
+      - name: Print compiled workflows for PR synchronization
         run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .github/workflows/otel-review.lock.yml .github/workflows/analyze-agent.lock.yml
-          if ! git diff --cached --quiet; then
-            git commit -m 'Compile agentic workflows'
-            git push origin "HEAD:${GITHUB_REF_NAME}"
-          fi
+          echo 'BEGIN_OTEL_REVIEW_LOCK_B64'
+          base64 -w0 .github/workflows/otel-review.lock.yml
+          echo
+          echo 'END_OTEL_REVIEW_LOCK_B64'
+          echo 'BEGIN_ANALYZE_AGENT_LOCK_B64'
+          base64 -w0 .github/workflows/analyze-agent.lock.yml
+          echo
+          echo 'END_ANALYZE_AGENT_LOCK_B64'
