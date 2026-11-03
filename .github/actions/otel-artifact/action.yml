@@ -1,0 +1,7 @@
+name: Local OTel artifact collector
+description: Starts a local OTLP collector and uploads its output from a post-job hook
+runs:
+  using: node24
+  main: main.cjs
+  post: post.cjs
+  post-if: always()

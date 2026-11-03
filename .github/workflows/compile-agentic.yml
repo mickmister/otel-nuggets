@@ -1,0 +1,34 @@
+name: Compile gh-aw workflows
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/otel-review.md'
+      - '.github/workflows/analyze-agent.md'
+      - '.github/workflows/compile-agentic.yml'
+permissions:
+  contents: read
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up gh-aw
+        uses: github/gh-aw/actions/setup-cli@main
+        with:
+          version: latest
+      - name: Compile
+        run: |
+          gh aw compile otel-review
+          gh aw compile analyze-agent
+          test -s .github/workflows/otel-review.lock.yml
+          test -s .github/workflows/analyze-agent.lock.yml
+      - name: Upload compiled workflows
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-gh-aw-lockfiles
+          path: |
+            .github/workflows/otel-review.lock.yml
+            .github/workflows/analyze-agent.lock.yml
+          retention-days: 2
