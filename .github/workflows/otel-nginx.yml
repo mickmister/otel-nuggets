@@ -1,0 +1,72 @@
+name: OTel Nginx demo
+
+on:
+  push:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  nginx:
+    name: Build, test and serve HTML
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # The collector registers a post-job hook. Since this runs before Thoth,
+      # its post hook runs after Thoth's, then uploads the completed telemetry.
+      - name: Start local collector and register artifact teardown
+        uses: ./.github/actions/otel-artifact
+
+      - name: Instrument job with Thoth
+        uses: plengauer/Thoth/actions/instrument/job@v5
+        with:
+          self_monitoring: 'false'
+          secrets_to_redact: ${{ toJSON(secrets) }}
+
+      - name: Run unit tests
+        run: node --test
+
+      - name: Build static HTML
+        run: node scripts/build.mjs
+
+      - name: Start Nginx container
+        run: |
+          docker run --detach --name otel-nugs-nginx \
+            --publish 127.0.0.1:8080:80 \
+            --volume "$PWD/dist:/usr/share/nginx/html:ro" \
+            nginx:1.27-alpine
+
+      - name: Verify Nginx serves built content
+        run: |
+          set -euo pipefail
+          for attempt in {1..30}; do
+            if curl --silent --show-error --fail http://127.0.0.1:8080/ -o /tmp/served.html; then
+              break
+            fi
+            sleep 1
+          done
+          test -s /tmp/served.html
+          cmp dist/index.html /tmp/served.html
+          grep -q 'OTel Nugs demo' /tmp/served.html
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/not-found)
+          test "$status" = 404
+          for i in {1..5}; do
+            curl --fail --silent --show-error --output /dev/null \
+              --write-out "Request $i: HTTP %{http_code}, %{time_total}s\n" \
+              http://127.0.0.1:8080/
+          done
+
+      - name: Show Nginx response headers
+        run: curl --fail --silent --show-error --head http://127.0.0.1:8080/
+
+      - name: Capture Nginx container logs
+        if: always()
+        run: docker logs otel-nugs-nginx || true
+
+      - name: Remove Nginx container
+        if: always()
+        run: docker rm --force otel-nugs-nginx || true
